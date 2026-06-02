@@ -73,11 +73,27 @@ export PATH="$HOME/.local/bin:$PATH"
 install_base_packages() {
   log "Updating apt and installing base packages..."
   export DEBIAN_FRONTEND=noninteractive
+  preseed_postfix
   $SUDO apt-get update -y
   $SUDO apt-get install -y --no-install-recommends \
     ca-certificates curl wget git unzip xz-utils \
     build-essential gnupg tmux
   ok "Base packages installed."
+}
+
+# Postfix can be pulled in transitively (e.g. emacs-nox -> mailutils -> an MTA),
+# which triggers the interactive "Postfix Configuration" debconf screen. Preseed
+# it to "Local only" (mail stays on this box, no internet relay) so installs run
+# unattended and never block on that prompt. Combined with DEBIAN_FRONTEND above.
+preseed_postfix() {
+  # debconf-set-selections lives in /usr/sbin (not always on a user's PATH), so
+  # run it through sudo, which resolves sbin. Tolerate failure — even without
+  # the preseed, DEBIAN_FRONTEND=noninteractive suppresses the prompt.
+  {
+    printf 'postfix postfix/main_mailer_type select Local only\n'
+    printf 'postfix postfix/mailname string %s\n' "$(hostname -f 2>/dev/null || hostname)"
+  } | $SUDO debconf-set-selections 2>/dev/null || \
+    warn "Could not preseed postfix (debconf-set-selections unavailable); relying on noninteractive frontend."
 }
 
 # ---------------------------------------------------------------------------
