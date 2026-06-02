@@ -56,10 +56,20 @@ export DEBIAN_FRONTEND=noninteractive
 # ---------------------------------------------------------------------------
 # Confirmation
 # ---------------------------------------------------------------------------
-if [[ "${ASSUME_YES:-0}" != "1" && -t 0 ]]; then
+if [[ "${ASSUME_YES:-0}" != "1" ]]; then
   warn "This will uninstall the dev tools set up by setup.sh for user '$USER'."
   [[ "${KEEP_DATA:-0}" == "1" ]] || warn "App data (~/.claude, ~/.codex, Antigravity cache) will also be removed."
-  read -r -p "Proceed? [y/N] " ans
+  # Read the answer from the terminal even when the script itself arrives on
+  # stdin (e.g. `curl … | bash`). If there is no terminal at all, refuse rather
+  # than silently destroying things — pass ASSUME_YES=1 for unattended runs.
+  if [[ -t 0 ]]; then
+    read -r -p "Proceed? [y/N] " ans
+  elif [[ -r /dev/tty ]]; then
+    read -r -p "Proceed? [y/N] " ans < /dev/tty
+  else
+    err "No terminal for confirmation. Re-run with ASSUME_YES=1 to proceed unattended."
+    exit 1
+  fi
   case "$ans" in [yY]|[yY][eE][sS]) ;; *) echo "Aborted."; exit 0 ;; esac
 fi
 
