@@ -54,6 +54,27 @@ SKIP_OHMYZSH=1 ./setup.sh     # skip oh-my-zsh
 EMACS_GUI=1 ./setup.sh        # full Emacs instead of emacs-nox
 ```
 
+## Uninstall
+
+Reverse everything `setup.sh` installed:
+
+```bash
+./uninstall.sh
+```
+
+Conservative by default — base/system packages (curl, git, build-essential, …)
+are kept, and app data dirs are removed. Options:
+
+```bash
+ASSUME_YES=1 ./uninstall.sh   # no confirmation prompt
+KEEP_DATA=1  ./uninstall.sh   # keep ~/.claude, ~/.codex, Antigravity logins/config
+KEEP_NODE=1  ./uninstall.sh   # keep Node.js + NodeSource repo
+REMOVE_BASE=1 ./uninstall.sh  # also purge base packages (keeps curl + ca-certificates)
+```
+
+It reverts the default shell to bash and the default editor to the system auto
+choice, and does not touch firewall/SSH/networking.
+
 ## After running
 
 1. `exec zsh` (or log out/in) to pick up zsh + PATH changes.
