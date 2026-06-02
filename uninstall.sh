@@ -64,8 +64,9 @@ if [[ "${ASSUME_YES:-0}" != "1" ]]; then
   # than silently destroying things — pass ASSUME_YES=1 for unattended runs.
   if [[ -t 0 ]]; then
     read -r -p "Proceed? [y/N] " ans
-  elif [[ -r /dev/tty ]]; then
-    read -r -p "Proceed? [y/N] " ans < /dev/tty
+  elif { exec 3</dev/tty; } 2>/dev/null; then
+    read -r -p "Proceed? [y/N] " ans <&3
+    exec 3<&-
   else
     err "No terminal for confirmation. Re-run with ASSUME_YES=1 to proceed unattended."
     exit 1
