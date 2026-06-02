@@ -18,10 +18,42 @@ Bootstrap script for a freshly provisioned **OCI Ubuntu (Ampere A1 / ARM64)** in
 
 The script is **idempotent** (safe to re-run) and **does not touch the firewall**, SSH, or networking — per your setup.
 
-## Usage
+## Quick install (one-liner)
+
+This repo is **private**, so a plain `curl … | bash` won't work — the fetch must
+be authenticated with a GitHub token that has read access to the repo.
+
+**1. Create a token** (one of):
+- Fine-grained PAT: <https://github.com/settings/tokens?type=beta> → only this repo → `Contents: Read-only`
+- Classic PAT: scope `repo`
+
+**2. On the fresh instance**, paste (replace `ghp_xxxx`):
 
 ```bash
-# Copy to the instance, then:
+GITHUB_TOKEN=ghp_xxxx bash -c 'curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" \
+  https://raw.githubusercontent.com/jay-jang/dev-server-setup/main/setup.sh | bash'
+```
+
+If you already have an authenticated `gh` on the box, no token needed:
+
+```bash
+gh api repos/jay-jang/dev-server-setup/contents/setup.sh \
+  -H "Accept: application/vnd.github.raw" | bash
+```
+
+> **If you make the repo public**, the clean tokenless one-liner works:
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/jay-jang/dev-server-setup/main/setup.sh | bash
+> ```
+
+> ⚠️ `curl … | bash` runs remote code immediately. Inspect the script first
+> (open the raw URL in a browser) before piping it to a shell.
+
+## Usage (clone)
+
+```bash
+gh repo clone jay-jang/dev-server-setup
+cd dev-server-setup
 chmod +x setup.sh
 ./setup.sh
 ```
@@ -41,5 +73,6 @@ EMACS_GUI=1 ./setup.sh        # full Emacs instead of emacs-nox
 2. Authenticate:
    - `claude` → browser login
    - `codex` → ChatGPT/OpenAI login
-   - `antigravity` → follow its login flow
-3. Verify: `claude --version`, `codex --version`, `antigravity --version`, `emacs --version`
+   - `agy` → Antigravity CLI login flow
+   - `gh auth login` → GitHub CLI
+3. Verify: `git --version`, `gh --version`, `claude --version`, `codex --version`, `agy --version`, `emacs --version`, `echo $EDITOR`
