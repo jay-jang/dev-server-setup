@@ -76,7 +76,7 @@ install_base_packages() {
   $SUDO apt-get update -y
   $SUDO apt-get install -y --no-install-recommends \
     ca-certificates curl wget git unzip xz-utils \
-    build-essential gnupg
+    build-essential gnupg tmux
   ok "Base packages installed."
 }
 
@@ -331,7 +331,7 @@ main() {
   echo "       codex         # opens ChatGPT/OpenAI login flow"
   echo "       agy           # Antigravity CLI — follow its login flow"
   echo "       gh auth login # authenticate GitHub CLI"
-  echo "  3. Verify: git --version ; gh --version ; claude --version ; codex --version ; agy --version ; emacs --version"
+  echo "  3. Verify: git --version ; gh --version ; tmux -V ; claude --version ; codex --version ; agy --version ; emacs --version"
   echo "       echo \$EDITOR   # -> emacs (default editor)"
 }
 

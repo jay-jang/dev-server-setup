@@ -6,7 +6,7 @@ Bootstrap script for a freshly provisioned **OCI Ubuntu (Ampere A1 / ARM64)** in
 
 | Item | Method | Notes |
 |------|--------|-------|
-| Base packages | `apt` | curl, git, build-essential, unzip, gnupg, … |
+| Base packages | `apt` | curl, git, build-essential, unzip, gnupg, tmux, … |
 | GitHub CLI (`gh`) | official apt repo | arm64 supported |
 | Node.js LTS | NodeSource | For MCP servers / npm tooling |
 | Emacs | `apt` | `emacs-nox` by default (headless); set `EMACS_GUI=1` for full |
