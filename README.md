@@ -20,34 +20,21 @@ The script is **idempotent** (safe to re-run) and **does not touch the firewall*
 
 ## Quick install (one-liner)
 
-This repo is **private**, so a plain `curl … | bash` won't work — the fetch must
-be authenticated with a GitHub token that has read access to the repo.
-
-**1. Create a token** (one of):
-- Fine-grained PAT: <https://github.com/settings/tokens?type=beta> → only this repo → `Contents: Read-only`
-- Classic PAT: scope `repo`
-
-**2. On the fresh instance**, paste (replace `ghp_xxxx`):
+On a fresh instance:
 
 ```bash
-GITHUB_TOKEN=ghp_xxxx bash -c 'curl -fsSL -H "Authorization: Bearer $GITHUB_TOKEN" \
-  https://raw.githubusercontent.com/jay-jang/dev-server-setup/main/setup.sh | bash'
+curl -fsSL https://raw.githubusercontent.com/jay-jang/dev-server-setup/main/setup.sh | bash
 ```
-
-If you already have an authenticated `gh` on the box, no token needed:
-
-```bash
-gh api repos/jay-jang/dev-server-setup/contents/setup.sh \
-  -H "Accept: application/vnd.github.raw" | bash
-```
-
-> **If you make the repo public**, the clean tokenless one-liner works:
-> ```bash
-> curl -fsSL https://raw.githubusercontent.com/jay-jang/dev-server-setup/main/setup.sh | bash
-> ```
 
 > ⚠️ `curl … | bash` runs remote code immediately. Inspect the script first
-> (open the raw URL in a browser) before piping it to a shell.
+> (open the [raw URL](https://raw.githubusercontent.com/jay-jang/dev-server-setup/main/setup.sh)
+> in a browser) before piping it to a shell.
+
+Pass options inline, e.g. skip oh-my-zsh:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jay-jang/dev-server-setup/main/setup.sh | SKIP_OHMYZSH=1 bash
+```
 
 ## Usage (clone)
 
