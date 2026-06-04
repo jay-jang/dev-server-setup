@@ -311,6 +311,30 @@ setup_aliases() {
   ok "Aliases added: e=emacs, ll='ls -al', ucc='claude --dangerously-skip-permissions'."
 }
 
+setup_prompt() {
+  log "Setting terminal prompt to account@directory format..."
+  ensure_prompt_lines "$HOME/.zshrc" 'zsh'
+  ensure_prompt_lines "$HOME/.bashrc" 'bash'
+  ok "Prompt configured."
+}
+
+ensure_prompt_lines() {
+  local rc="$1"
+  local shell_type="$2"
+  [[ -f "$rc" ]] || touch "$rc"
+  if ! grep -qs 'oci-setup: custom prompt' "$rc"; then
+    {
+      echo ''
+      echo '# Added by oci-setup: custom prompt'
+      if [[ "$shell_type" == "zsh" ]]; then
+        echo "PROMPT='%n@%~%% '"
+      else
+        echo "PS1='\u@\w\$ '"
+      fi
+    } >> "$rc"
+  fi
+}
+
 ensure_alias_lines() {
   local rc="$1"
   [[ -f "$rc" ]] || touch "$rc"
@@ -365,6 +389,7 @@ main() {
   install_antigravity
   install_zsh
   setup_aliases
+  setup_prompt
 
   echo
   ok "Setup complete."

@@ -202,6 +202,9 @@ strip_rc_lines() {
       -e 'alias e="emacs"' \
       -e 'alias ll="ls -al"' \
       -e 'alias ucc="claude --dangerously-skip-permissions"' \
+      -e '# Added by oci-setup: custom prompt' \
+      -e "PROMPT='%n@%~%% '" \
+      -e "PS1='\u@\w\$ '" \
       "$rc" > "$tmp" && mv "$tmp" "$rc"
   done
   ok "rc files cleaned."
