@@ -5,7 +5,7 @@
 # Removes: Claude Code, OpenAI Codex, Antigravity (agy), Emacs, GitHub CLI,
 #          Node.js (NodeSource), tmux, zsh + oh-my-zsh; reverts the default
 #          shell to bash and the default editor to the system auto choice;
-#          strips the PATH/EDITOR lines setup.sh added to your shell rc files.
+#          strips the PATH/EDITOR/alias lines setup.sh added to your shell rc files.
 #
 # Conservative by default:
 #   - Base/system packages (curl, wget, git, ca-certificates, gnupg, unzip,
@@ -184,7 +184,7 @@ revert_shell_and_zsh() {
 }
 
 # ---------------------------------------------------------------------------
-# 8. Strip the PATH / EDITOR lines setup.sh appended to shell rc files
+# 8. Strip the PATH / EDITOR / alias lines setup.sh appended to shell rc files
 # ---------------------------------------------------------------------------
 strip_rc_lines() {
   log "Stripping oci-setup lines from shell rc files..."
@@ -198,6 +198,10 @@ strip_rc_lines() {
       -e '# Added by oci-setup: default editor' \
       -e 'export EDITOR="emacs"' \
       -e 'export VISUAL="emacs"' \
+      -e '# Added by oci-setup: aliases' \
+      -e 'alias e="emacs"' \
+      -e 'alias ll="ls -al"' \
+      -e 'alias ucc="claude --dangerously-skip-permissions"' \
       "$rc" > "$tmp" && mv "$tmp" "$rc"
   done
   ok "rc files cleaned."

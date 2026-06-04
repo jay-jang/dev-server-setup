@@ -15,6 +15,7 @@ Bootstrap script for a freshly provisioned **OCI Ubuntu (Ampere A1 / ARM64)** in
 | OpenAI Codex CLI | official installer (npm fallback) | aarch64 musl binary |
 | Antigravity CLI | official installer | `antigravity.google/cli/install.sh`; linux-arm supported |
 | zsh | `apt` + `chsh` | set as default shell, with oh-my-zsh |
+| Shell aliases | `.zshrc` / `.bashrc` | `e`=emacs, `ll`=`ls -al`, `ucc`=`claude --dangerously-skip-permissions` |
 
 The script is **idempotent** (safe to re-run) and **does not touch the firewall**, SSH, or networking — per your setup.
 

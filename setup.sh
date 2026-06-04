@@ -3,7 +3,8 @@
 # setup.sh — Fresh OCI (Ubuntu / Ampere ARM64) instance bootstrap
 #
 # Installs: Claude Code, OpenAI Codex CLI, Antigravity CLI (best-effort),
-#           Emacs, and sets zsh as the default shell.
+#           Emacs, and sets zsh as the default shell. Adds shell aliases
+#           (e=emacs, ll='ls -al', ucc=claude --dangerously-skip-permissions).
 #
 # Design goals:
 #   - Idempotent: safe to re-run; each step skips work already done.
@@ -297,6 +298,33 @@ install_zsh() {
   fi
 }
 
+# ---------------------------------------------------------------------------
+# 7b. Shell aliases (e=emacs, ll='ls -al', ucc=claude --dangerously-skip-permissions)
+#     Runs after install_zsh so oh-my-zsh has already settled ~/.zshrc.
+#     Aliases only matter in interactive shells, so they go in .zshrc/.bashrc
+#     (not .zshenv, which also runs for non-interactive `ssh host 'cmd'`).
+# ---------------------------------------------------------------------------
+setup_aliases() {
+  log "Adding shell aliases (e, ll, ucc)..."
+  ensure_alias_lines "$HOME/.zshrc"
+  ensure_alias_lines "$HOME/.bashrc"
+  ok "Aliases added: e=emacs, ll='ls -al', ucc='claude --dangerously-skip-permissions'."
+}
+
+ensure_alias_lines() {
+  local rc="$1"
+  [[ -f "$rc" ]] || touch "$rc"
+  if ! grep -qs 'oci-setup: aliases' "$rc"; then
+    {
+      echo ''
+      echo '# Added by oci-setup: aliases'
+      echo 'alias e="emacs"'
+      echo 'alias ll="ls -al"'
+      echo 'alias ucc="claude --dangerously-skip-permissions"'
+    } >> "$rc"
+  fi
+}
+
 ensure_path_line() {
   local rc="$1"
   [[ -f "$rc" ]] || touch "$rc"
@@ -336,6 +364,7 @@ main() {
   install_codex
   install_antigravity
   install_zsh
+  setup_aliases
 
   echo
   ok "Setup complete."
