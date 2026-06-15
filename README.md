@@ -67,7 +67,8 @@ reboots. Two pieces make that work:
 - **Restart the server at boot** — a systemd *user* service
   (`~/.config/systemd/user/tmux.service`) plus user lingering, so the tmux
   server (and therefore the continuum restore) comes back at boot without anyone
-  logging in.
+  logging in. On a clean reboot the service also saves once on stop, so you get
+  the latest state rather than only the last 15-min auto-save.
 
 On a real instance the service is enabled during setup. If systemd wasn't
 reachable at setup time (e.g. you ran inside a container), enable it once on the
