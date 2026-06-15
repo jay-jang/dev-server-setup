@@ -7,6 +7,7 @@ Bootstrap script for a freshly provisioned **OCI Ubuntu (Ampere A1 / ARM64)** in
 | Item | Method | Notes |
 |------|--------|-------|
 | Base packages | `apt` | curl, git, build-essential, unzip, gnupg, tmux, … |
+| tmux persistence | tpm + resurrect + continuum + systemd | Sessions auto-save and are restored after a **reboot** |
 | GitHub CLI (`gh`) | official apt repo | arm64 supported |
 | Node.js LTS | NodeSource | For MCP servers / npm tooling |
 | Emacs | `apt` | `emacs-nox` by default (headless); set `EMACS_GUI=1` for full |
@@ -54,6 +55,48 @@ Run as the normal `ubuntu` user (not root) so the AI CLIs install into your home
 SKIP_OHMYZSH=1 ./setup.sh     # skip oh-my-zsh
 EMACS_GUI=1 ./setup.sh        # full Emacs instead of emacs-nox
 ```
+
+## tmux survives reboot
+
+Your tmux sessions are saved and come back automatically after the instance
+reboots. Two pieces make that work:
+
+- **Restore session contents** — [tmux-resurrect] + [tmux-continuum] (installed
+  via [tpm]). Continuum auto-saves every 15 min and restores the last saved
+  environment whenever the tmux server starts (`@continuum-restore on`).
+- **Restart the server at boot** — a systemd *user* service
+  (`~/.config/systemd/user/tmux.service`) plus user lingering, so the tmux
+  server (and therefore the continuum restore) comes back at boot without anyone
+  logging in.
+
+On a real instance the service is enabled during setup. If systemd wasn't
+reachable at setup time (e.g. you ran inside a container), enable it once on the
+box:
+
+```bash
+systemctl --user enable --now tmux.service
+```
+
+Verify after a reboot: `tmux ls` should list your previous sessions.
+
+[tpm]: https://github.com/tmux-plugins/tpm
+[tmux-resurrect]: https://github.com/tmux-plugins/tmux-resurrect
+[tmux-continuum]: https://github.com/tmux-plugins/tmux-continuum
+
+## Testing
+
+The `test/` scripts spin up a fresh-OCI-like arm64 Ubuntu container and run the
+real `setup.sh` inside it. `test/run.sh` is the host-side launcher (needs Docker):
+
+```bash
+./test/run.sh                       # default: setup smoke test (docker-test.sh)
+./test/run.sh tmux-reboot-test.sh   # prove tmux sessions survive a reboot
+./test/run.sh uninstall-test.sh     # setup → uninstall round-trip
+```
+
+The reboot test creates a tmux session, lets resurrect save it, kills the whole
+tmux server (the part of a reboot that matters to tmux), brings the server back
+up the way the boot service does, and asserts the session/window are restored.
 
 ## Uninstall
 

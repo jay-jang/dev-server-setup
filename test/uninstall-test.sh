@@ -44,6 +44,15 @@ check_gone "node"   node
 check_gone "tmux"   tmux
 check_gone "zsh"    zsh
 
+echo "  --- tmux persistence removed ---"
+check_path_gone() {  # check_path_gone <label> <path>
+  if [ -e "$2" ]; then echo "  ✗ $1 remains ($2)"; fail=1; else echo "  ✓ $1 removed"; fi
+}
+check_path_gone "tmux.conf block / file" "$HOME/.tmux.conf"
+check_path_gone "tmux plugins dir"       "$HOME/.tmux/plugins"
+check_path_gone "tmux systemd user unit" "$HOME/.config/systemd/user/tmux.service"
+check_path_gone "resurrect saved state"  "$HOME/.local/share/tmux/resurrect"
+
 echo "  --- reverted state ---"
 sh="$(getent passwd ubuntu | cut -d: -f7)"
 case "$sh" in /bin/bash|/usr/bin/bash) echo "  ✓ login shell back to bash ($sh)" ;; *) echo "  ✗ login shell is $sh"; fail=1 ;; esac

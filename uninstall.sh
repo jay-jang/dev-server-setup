@@ -156,9 +156,33 @@ remove_nodejs() {
 # 6. tmux
 # ---------------------------------------------------------------------------
 remove_tmux() {
-  log "Removing tmux..."
+  log "Removing tmux and its persistence setup..."
+
+  # Boot service + linger (best-effort; no-op without systemd as PID 1).
+  systemctl --user disable --now tmux.service >/dev/null 2>&1 || true
+  rm -f "$HOME/.config/systemd/user/tmux.service"
+  if have loginctl; then $SUDO loginctl disable-linger "$USER" >/dev/null 2>&1 || true; fi
+
+  # Plugins (tpm + resurrect + continuum); drop ~/.tmux/plugins if now empty.
+  rm -rf "$HOME/.tmux/plugins/tpm" \
+         "$HOME/.tmux/plugins/tmux-resurrect" \
+         "$HOME/.tmux/plugins/tmux-continuum"
+  rmdir "$HOME/.tmux/plugins" 2>/dev/null || true
+
+  # Strip the persistence block from ~/.tmux.conf; remove the file if empty.
+  if [[ -f "$HOME/.tmux.conf" ]] && grep -qs 'oci-setup tmux persistence' "$HOME/.tmux.conf"; then
+    sed -i '/>>> oci-setup tmux persistence >>>/,/<<< oci-setup tmux persistence <<</d' "$HOME/.tmux.conf"
+    grep -q '[^[:space:]]' "$HOME/.tmux.conf" || rm -f "$HOME/.tmux.conf"
+  fi
+
+  # Saved session state (treat like other app data).
+  if [[ "${KEEP_DATA:-0}" != "1" ]]; then
+    rm -rf "$HOME/.local/share/tmux/resurrect" "$HOME/.tmux/resurrect"
+  fi
+  rmdir "$HOME/.tmux" 2>/dev/null || true
+
   apt_remove tmux
-  ok "tmux removed."
+  ok "tmux and persistence setup removed."
 }
 
 # ---------------------------------------------------------------------------
