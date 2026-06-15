@@ -161,7 +161,13 @@ remove_tmux() {
   # Boot service + linger (best-effort; no-op without systemd as PID 1).
   systemctl --user disable --now tmux.service >/dev/null 2>&1 || true
   rm -f "$HOME/.config/systemd/user/tmux.service"
-  if have loginctl; then $SUDO loginctl disable-linger "$USER" >/dev/null 2>&1 || true; fi
+  # Only disable linger if *we* turned it on (marker written by setup). Linger
+  # is account-level shared state; other user services may rely on it.
+  if [[ -f "$HOME/.config/oci-setup/linger.marker" ]]; then
+    have loginctl && $SUDO loginctl disable-linger "$USER" >/dev/null 2>&1 || true
+    rm -f "$HOME/.config/oci-setup/linger.marker"
+    rmdir "$HOME/.config/oci-setup" 2>/dev/null || true
+  fi
 
   # Plugins (tpm + resurrect + continuum); drop ~/.tmux/plugins if now empty.
   rm -rf "$HOME/.tmux/plugins/tpm" \

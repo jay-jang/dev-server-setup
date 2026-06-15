@@ -407,7 +407,12 @@ install_tmux_plugin() {  # install_tmux_plugin <name> <git-url>
   local name="$1" url="$2" dir="$HOME/.tmux/plugins/$1"
   if [[ -d "$dir/.git" ]]; then
     ok "tmux plugin '$name' already present."
-  elif git clone --depth 1 "$url" "$dir" >/dev/null 2>&1; then
+    return
+  fi
+  # A previous run interrupted mid-clone can leave a non-empty dir without
+  # .git; git refuses to clone into it. Clear that partial state first.
+  [[ -d "$dir" ]] && rm -rf "$dir"
+  if git clone --depth 1 "$url" "$dir" >/dev/null 2>&1; then
     ok "tmux plugin '$name' installed."
   else
     warn "Could not clone tmux plugin '$name' from $url."
@@ -442,15 +447,24 @@ install_tmux_boot_service() {
   unit="$unit_dir/tmux.service"
   local tmux_bin; tmux_bin="$(command -v tmux)"
   mkdir -p "$unit_dir"
+  # Notes on the unit:
+  #   - No `After=network-online.target`: that is a *system* target and is not
+  #     visible to the per-user `systemd --user` manager, so it would be inert.
+  #     tmux needs no network anyway.
+  #   - ExecStart uses a default session name (not `-s main`): tmux-resurrect's
+  #     restore cleans up the bootstrap session only when it is the default "0",
+  #     so a named session would linger empty after the restore.
+  #   - ExecStop saves first (best-effort, `-` prefix), so a clean reboot keeps
+  #     the very latest state instead of only the last 15-min continuum auto-save.
   cat > "$unit" <<EOF
 [Unit]
 Description=tmux server (oci-setup: start at boot, restore last session)
 Documentation=man:tmux(1)
-After=network-online.target
 
 [Service]
 Type=forking
-ExecStart=$tmux_bin new-session -d -s main
+ExecStart=$tmux_bin new-session -d
+ExecStop=-$tmux_bin run-shell '%h/.tmux/plugins/tmux-resurrect/scripts/save.sh'
 ExecStop=$tmux_bin kill-server
 Restart=on-failure
 KillMode=none
@@ -463,9 +477,17 @@ EOF
   # Enable lingering so the user service runs at boot without an active login,
   # then enable the unit. Best-effort: a container without systemd as PID 1
   # rejects these — that's fine, the unit file is in place for a real OCI boot.
+  # Record a marker ONLY when we flip linger off->on, so uninstall can reverse
+  # exactly what we changed (linger is account-level shared state).
   if have loginctl; then
+    local linger_prior
+    linger_prior="$($SUDO loginctl show-user "$USER" --property=Linger --value 2>/dev/null || echo unknown)"
     if $SUDO loginctl enable-linger "$USER" >/dev/null 2>&1; then
       ok "Enabled linger for '$USER' (user services run at boot)."
+      if [[ "$linger_prior" == "no" ]]; then
+        mkdir -p "$HOME/.config/oci-setup"
+        : > "$HOME/.config/oci-setup/linger.marker"
+      fi
     else
       warn "Could not enable linger now (no systemd here?); applies on a real OCI boot."
     fi
