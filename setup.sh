@@ -375,6 +375,112 @@ ensure_editor_env() {
 }
 
 # ---------------------------------------------------------------------------
+# 7c. tmux session persistence (survives reboot)
+#     Two parts:
+#       (a) Restore session *contents* — tmux-resurrect (manual save/restore)
+#           plus tmux-continuum, which auto-saves on a timer and auto-restores
+#           the last environment whenever the tmux server starts.
+#       (b) Restart the tmux *server at boot* — a systemd user service plus
+#           linger, so the server (and therefore the continuum restore) comes
+#           back automatically after a reboot without anyone logging in.
+# ---------------------------------------------------------------------------
+setup_tmux() {
+  if ! have tmux; then
+    warn "tmux not installed; skipping tmux persistence setup."
+    return
+  fi
+  log "Configuring tmux session persistence (survives reboot)..."
+
+  # (a) plugins: tpm (loader) + resurrect (save/restore) + continuum (auto)
+  install_tmux_plugin tpm            https://github.com/tmux-plugins/tpm
+  install_tmux_plugin tmux-resurrect https://github.com/tmux-plugins/tmux-resurrect
+  install_tmux_plugin tmux-continuum https://github.com/tmux-plugins/tmux-continuum
+  ensure_tmux_conf
+
+  # (b) bring the server back at boot
+  install_tmux_boot_service
+
+  ok "tmux persistence configured (resurrect + continuum + boot service)."
+}
+
+install_tmux_plugin() {  # install_tmux_plugin <name> <git-url>
+  local name="$1" url="$2" dir="$HOME/.tmux/plugins/$1"
+  if [[ -d "$dir/.git" ]]; then
+    ok "tmux plugin '$name' already present."
+  elif git clone --depth 1 "$url" "$dir" >/dev/null 2>&1; then
+    ok "tmux plugin '$name' installed."
+  else
+    warn "Could not clone tmux plugin '$name' from $url."
+  fi
+}
+
+ensure_tmux_conf() {
+  local conf="$HOME/.tmux.conf"
+  [[ -f "$conf" ]] || touch "$conf"
+  if grep -qs 'oci-setup tmux persistence' "$conf"; then
+    ok "~/.tmux.conf already has the persistence block."
+    return
+  fi
+  cat >> "$conf" <<'EOF'
+
+# >>> oci-setup tmux persistence >>>
+# Save/restore tmux sessions across restarts and full reboots.
+set -g @plugin 'tmux-plugins/tpm'
+set -g @plugin 'tmux-plugins/tmux-resurrect'
+set -g @plugin 'tmux-plugins/tmux-continuum'
+set -g @resurrect-capture-pane-contents 'on'
+set -g @continuum-restore 'on'
+set -g @continuum-save-interval '15'
+run '~/.tmux/plugins/tpm/tpm'
+# <<< oci-setup tmux persistence <<<
+EOF
+  ok "Added persistence block to ~/.tmux.conf."
+}
+
+install_tmux_boot_service() {
+  local unit_dir="$HOME/.config/systemd/user" unit
+  unit="$unit_dir/tmux.service"
+  local tmux_bin; tmux_bin="$(command -v tmux)"
+  mkdir -p "$unit_dir"
+  cat > "$unit" <<EOF
+[Unit]
+Description=tmux server (oci-setup: start at boot, restore last session)
+Documentation=man:tmux(1)
+After=network-online.target
+
+[Service]
+Type=forking
+ExecStart=$tmux_bin new-session -d -s main
+ExecStop=$tmux_bin kill-server
+Restart=on-failure
+KillMode=none
+
+[Install]
+WantedBy=default.target
+EOF
+  ok "Wrote systemd user unit: $unit"
+
+  # Enable lingering so the user service runs at boot without an active login,
+  # then enable the unit. Best-effort: a container without systemd as PID 1
+  # rejects these — that's fine, the unit file is in place for a real OCI boot.
+  if have loginctl; then
+    if $SUDO loginctl enable-linger "$USER" >/dev/null 2>&1; then
+      ok "Enabled linger for '$USER' (user services run at boot)."
+    else
+      warn "Could not enable linger now (no systemd here?); applies on a real OCI boot."
+    fi
+  fi
+  if have systemctl; then
+    systemctl --user daemon-reload >/dev/null 2>&1 || true
+    if systemctl --user enable tmux.service >/dev/null 2>&1; then
+      ok "Enabled tmux.service (user)."
+    else
+      warn "Could not enable tmux.service now (no systemd here?); on the server run: systemctl --user enable --now tmux.service"
+    fi
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 main() {
@@ -390,6 +496,7 @@ main() {
   install_zsh
   setup_aliases
   setup_prompt
+  setup_tmux
 
   echo
   ok "Setup complete."
@@ -403,6 +510,9 @@ main() {
   echo "       gh auth login # authenticate GitHub CLI"
   echo "  3. Verify: git --version ; gh --version ; tmux -V ; claude --version ; codex --version ; agy --version ; emacs --version"
   echo "       echo \$EDITOR   # -> emacs (default editor)"
+  echo "  4. tmux now survives reboot: the systemd user service restarts the"
+  echo "       server at boot and continuum restores your last session."
+  echo "       Enable it now without a reboot: systemctl --user enable --now tmux.service"
 }
 
 main "$@"
